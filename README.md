@@ -1,2 +1,2 @@
 # gsounder
-A WIP soundboard application for linux 
+A WIP soundboard application for Linux 
