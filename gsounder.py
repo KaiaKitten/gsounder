@@ -1,6 +1,7 @@
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gio
+gi.require_version('Gst', '1.0')
+from gi.repository import Gtk, Gio, Gst
 
 
 class Interface(Gtk.Window):
@@ -36,29 +37,44 @@ class Interface(Gtk.Window):
 
     def on_button_clicked(self, widget):
         dialog = AddDialog(self)
-        response = dialog.run()
+        respone = None
+        while(respone is None):
+            response = dialog.run()
+            if response == Gtk.ResponseType.OK:
+                print("The OK button was clicked")
+                txt = dialog.uriEntry.get_text()
+                print(txt)
+                player.set_uri(txt)
+                txt = dialog.nameEntry.get_text()
+                print(txt)
+                txt = dialog.volEntry.get_value()
+                print(txt)
+                dialog.destroy()
+                break
+            elif response == Gtk.ResponseType.APPLY:
+                print("The APPLY button was clicked")
+                txt = dialog.uriEntry.get_text()
+                print(txt)
+                player.set_uri(txt)
+                txt = dialog.nameEntry.get_text()
+                print(txt)
+                txt = dialog.volEntry.get_value()
+                print(txt)
+                continue
+            elif response == Gtk.ResponseType.CANCEL:
+                print("The Cancel button was clicked")
+                dialog.destroy()
+                break
 
-        txt = dialog.uriEntry.get_text()
-        print(txt)
-        txt = dialog.nameEntry.get_text()
-        print(txt)
-        txt = dialog.volEntry.get_value()
-        print(txt)
-
-        if response == Gtk.ResponseType.OK:
-            print("The OK button was clicked")
-        elif response == Gtk.ResponseType.CANCEL:
-            print("The Cancel button was clicked")
-
-        dialog.destroy()
 
 
 class AddDialog(Gtk.Dialog):
 
     def __init__(self, parent):
         Gtk.Dialog.__init__(self, "Add Sound File", parent, 0,
-                            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-                             Gtk.STOCK_OK, Gtk.ResponseType.OK))
+                            ("_Cancel", Gtk.ResponseType.CANCEL,
+                             "_Apply", Gtk.ResponseType.APPLY,
+                             "_Ok", Gtk.ResponseType.OK))
         self.set_default_size(150, 100)
         self.set_border_width(10)
 
@@ -82,6 +98,12 @@ class AddDialog(Gtk.Dialog):
         self.volEntry.add_mark(50, Gtk.PositionType.TOP, None)
         self.volEntry.set_hexpand(True)
 
+        self.playButtonImage = Gtk.Image()
+        self.playButtonImage.set_from_stock("gtk-media-play", Gtk.IconSize.BUTTON)
+        self.playButton = Gtk.Button.new()
+        self.playButton.add(self.playButtonImage)
+        self.playButton.connect("clicked", player.playToggled)
+
         grid.attach(namelabel, 0, 0, 1, 1)
         grid.attach_next_to(self.nameEntry, namelabel,
                             Gtk.PositionType.RIGHT, 2, 1)
@@ -93,12 +115,50 @@ class AddDialog(Gtk.Dialog):
                             Gtk.PositionType.BOTTOM, 1, 1)
         grid.attach_next_to(self.volEntry, vollabel,
                             Gtk.PositionType.RIGHT, 2, 1)
-
+        grid.attach_next_to(self.playButton, vollabel,
+                            Gtk.PositionType.BOTTOM, 1, 1)
         grid.show_all()
 
         self.get_content_area().pack_start(grid, True, True, 0)
         self.show_all()
 
+class Player():
+
+    def __init__(self):
+
+        self.uri = "file:///home/kyahco/Music/Random/Under-Pressure.wav"
+        self.playing = False
+
+        # GStreamer Setup
+        Gst.init_check(None)
+        self.player = Gst.ElementFactory.make("playbin", "player")
+        self.IS_GST010 = Gst.version()[0] == 0
+        fakesink = Gst.ElementFactory.make("fakesink", "fakesink")
+        self.player.set_property("video-sink", fakesink)
+        bus = self.player.get_bus()
+        # bus.add_signal_watch_full()
+        # bus.connect("message", self.on_message)
+        # self.player.connect("about-to-finish",  self.on_finished)
+
+    def set_uri(self, uri):
+        self.uri = uri
+
+    def play(self):
+        self.player.set_property("uri", self.uri)
+        self.player.set_state(Gst.State.PLAYING)
+
+    def stop(self):
+        self.player.set_state(Gst.State.NULL)
+
+    def playToggled(self, w):
+        if(self.playing is False):
+            self.play()
+        else:
+            self.stop()
+
+        self.playing = not(self.playing)
+
 if __name__ == "__main__":
     Interface()
+    player = Player()
     Gtk.main()
