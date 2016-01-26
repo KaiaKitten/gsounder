@@ -1,7 +1,8 @@
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version('Gst', '1.0')
-from gi.repository import Gtk, Gio, Gst
+gi.require_version('GstAudio', '1.0')
+from gi.repository import Gtk, Gio, Gst, GstAudio
 
 
 class Interface(Gtk.Window):
@@ -47,8 +48,6 @@ class Interface(Gtk.Window):
                 player.set_uri(txt)
                 txt = dialog.nameEntry.get_text()
                 print(txt)
-                txt = dialog.volEntry.get_value()
-                print(txt)
                 dialog.destroy()
                 break
             elif response == Gtk.ResponseType.APPLY:
@@ -58,14 +57,11 @@ class Interface(Gtk.Window):
                 player.set_uri(txt)
                 txt = dialog.nameEntry.get_text()
                 print(txt)
-                txt = dialog.volEntry.get_value()
-                print(txt)
                 continue
             elif response == Gtk.ResponseType.CANCEL:
                 print("The Cancel button was clicked")
                 dialog.destroy()
                 break
-
 
 
 class AddDialog(Gtk.Dialog):
@@ -93,10 +89,14 @@ class AddDialog(Gtk.Dialog):
         self.uriEntry.set_hexpand(True)
         vollabel = Gtk.Label("Volume:")
         vollabel.set_yalign(0.9)
-        self.volEntry = Gtk.HScale().new(Gtk.Adjustment(101, 0, 101, 1, 1, 1))
-        self.volEntry.set_digits(0)
-        self.volEntry.add_mark(50, Gtk.PositionType.TOP, None)
+
+        self.volEntry = Gtk.HScale().new_with_range(0, 1, 0.02)
+        self.volEntry.set_value(0.5)
+        self.volEntry.set_digits(2)
+        self.volEntry.add_mark(0.5, Gtk.PositionType.TOP, None)
         self.volEntry.set_hexpand(True)
+        self.volEntry.connect("change-value", player.set_volume)
+        self.volEntry.connect("format-value", self.format)
 
         self.playButtonImage = Gtk.Image()
         self.playButtonImage.set_from_stock("gtk-media-play", Gtk.IconSize.BUTTON)
@@ -122,6 +122,10 @@ class AddDialog(Gtk.Dialog):
         self.get_content_area().pack_start(grid, True, True, 0)
         self.show_all()
 
+    def format(self, scale, value):
+        return str(round(value*100)) + "%"
+
+
 class Player():
 
     def __init__(self):
@@ -131,7 +135,7 @@ class Player():
 
         # GStreamer Setup
         Gst.init_check(None)
-        self.player = Gst.ElementFactory.make("playbin", "player")
+        self.player = Gst.ElementFactory.make("playbin", "audio-player")
         self.IS_GST010 = Gst.version()[0] == 0
         fakesink = Gst.ElementFactory.make("fakesink", "fakesink")
         self.player.set_property("video-sink", fakesink)
@@ -139,6 +143,12 @@ class Player():
         # bus.add_signal_watch_full()
         # bus.connect("message", self.on_message)
         # self.player.connect("about-to-finish",  self.on_finished)
+
+    def get_volume(self):
+        return self.player.get_property("volume")
+
+    def set_volume(self, scale, scroll_type, value):
+        self.player.set_property("volume", value)
 
     def set_uri(self, uri):
         self.uri = uri
