@@ -26,6 +26,10 @@ class Interface(Gtk.Window):
         Gtk.StyleContext.add_class(box.get_style_context(), "linked")
         self.add(box)
 
+        clip = Clip("jepordy", "file:///home/kyahco/Music/Random/Jeopardy.wav", None, None, 0.4)
+        btn = clip.create_button()
+        box.add(btn)
+
         self.connect("delete-event", Gtk.main_quit)
         self.show_all()
 
@@ -95,7 +99,7 @@ class AddDialog(Gtk.Dialog):
         self.volEntry.set_digits(2)
         self.volEntry.add_mark(0.5, Gtk.PositionType.TOP, None)
         self.volEntry.set_hexpand(True)
-        self.volEntry.connect("change-value", player.set_volume)
+        self.volEntry.connect("change-value", player.set_volume_slider)
         self.volEntry.connect("format-value", self.format)
 
         self.playButtonImage = Gtk.Image()
@@ -147,7 +151,10 @@ class Player():
     def get_volume(self):
         return self.player.get_property("volume")
 
-    def set_volume(self, scale, scroll_type, value):
+    def set_volume(self, value):
+        self.player.set_property("volume", value)
+
+    def set_volume_slider(self, scale, scroll_type, value):
         self.player.set_property("volume", value)
 
     def set_uri(self, uri):
@@ -167,6 +174,28 @@ class Player():
             self.stop()
 
         self.playing = not(self.playing)
+
+
+class Clip():
+
+    def __init__(self, name, uri, start, end, vol):
+        self.name = name
+        self.uri = uri
+        self.start = start
+        self.end = end
+        self.vol = vol
+
+    def create_button(self):
+        btn = Gtk.Button.new_with_label(self.name)
+        btn.connect("clicked", self.on_button_clicked)
+        return btn
+
+    def on_button_clicked(self, widget):
+        player.set_uri(self.uri)
+        player.set_volume(self.vol)
+        player.playToggled(widget)
+
+
 
 if __name__ == "__main__":
     Interface()
