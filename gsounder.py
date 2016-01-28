@@ -22,13 +22,12 @@ class Interface(Gtk.Window):
         addbtn.connect("clicked", self.on_button_clicked)
         hb.pack_end(addbtn)
 
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        Gtk.StyleContext.add_class(box.get_style_context(), "linked")
-        self.add(box)
-
-        clip = Clip("jepordy", "file:///home/kyahco/Music/Random/Jeopardy.wav", None, None, 0.4)
-        btn = clip.create_button()
-        box.add(btn)
+        self.flowbox = Gtk.FlowBox()
+        self.flowbox.set_valign(Gtk.Align.BASELINE)
+        self.flowbox.set_halign(Gtk.Align.BASELINE)
+        self.flowbox.set_homogeneous(True)
+        self.flowbox.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.add(self.flowbox)
 
         self.connect("delete-event", Gtk.main_quit)
         self.show_all()
@@ -46,21 +45,16 @@ class Interface(Gtk.Window):
         while(respone is None):
             response = dialog.run()
             if response == Gtk.ResponseType.OK:
-                print("The OK button was clicked")
-                txt = dialog.uriEntry.get_text()
-                print(txt)
-                player.set_uri(txt)
-                txt = dialog.nameEntry.get_text()
-                print(txt)
+                clip = Clip(dialog.nameEntry.get_text(),
+                            dialog.uriEntry.get_text(),
+                            None, None, dialog.volEntry.get_value())
+                btn = clip.create_button()
+                self.flowbox.insert(btn, -1)
+                self.show_all()
                 dialog.destroy()
                 break
             elif response == Gtk.ResponseType.APPLY:
-                print("The APPLY button was clicked")
-                txt = dialog.uriEntry.get_text()
-                print(txt)
-                player.set_uri(txt)
-                txt = dialog.nameEntry.get_text()
-                print(txt)
+                player.set_uri(dialog.uriEntry.get_text())
                 continue
             elif response == Gtk.ResponseType.CANCEL:
                 print("The Cancel button was clicked")
@@ -81,7 +75,6 @@ class AddDialog(Gtk.Dialog):
         grid = Gtk.Grid()
         grid.set_row_spacing(10)
         grid.set_column_spacing(5)
-        # self.add(grid)
 
         namelabel = Gtk.Label("Name:")
         self.nameEntry = Gtk.Entry()
@@ -103,7 +96,8 @@ class AddDialog(Gtk.Dialog):
         self.volEntry.connect("format-value", self.format)
 
         self.playButtonImage = Gtk.Image()
-        self.playButtonImage.set_from_stock("gtk-media-play", Gtk.IconSize.BUTTON)
+        self.playButtonImage.set_from_stock("gtk-media-play",
+        				    Gtk.IconSize.BUTTON)
         self.playButton = Gtk.Button.new()
         self.playButton.add(self.playButtonImage)
         self.playButton.connect("clicked", player.playToggled)
