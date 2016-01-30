@@ -57,7 +57,6 @@ class Interface(Gtk.Window):
                 player.set_uri(dialog.uriEntry.get_text())
                 continue
             elif response == Gtk.ResponseType.CANCEL:
-                print("The Cancel button was clicked")
                 dialog.destroy()
                 break
 
@@ -95,26 +94,33 @@ class AddDialog(Gtk.Dialog):
         self.volEntry.connect("change-value", player.set_volume_slider)
         self.volEntry.connect("format-value", self.format)
 
+
+        self.fileButton = Gtk.Button("Browse")
+        self.fileButton.connect("clicked", self.on_file_clicked)
+
         self.playButtonImage = Gtk.Image()
         self.playButtonImage.set_from_stock("gtk-media-play",
-        				    Gtk.IconSize.BUTTON)
+                                            Gtk.IconSize.BUTTON)
         self.playButton = Gtk.Button.new()
         self.playButton.add(self.playButtonImage)
         self.playButton.connect("clicked", player.playToggled)
+        self.playButton.set_valign(Gtk.Align.END)
 
         grid.attach(namelabel, 0, 0, 1, 1)
         grid.attach_next_to(self.nameEntry, namelabel,
-                            Gtk.PositionType.RIGHT, 2, 1)
+                            Gtk.PositionType.RIGHT, 3, 1)
         grid.attach_next_to(urilabel, namelabel,
                             Gtk.PositionType.BOTTOM, 1, 1)
         grid.attach_next_to(self.uriEntry, urilabel,
                             Gtk.PositionType.RIGHT, 2, 1)
+        grid.attach_next_to(self.fileButton, self.uriEntry,
+                            Gtk.PositionType.RIGHT, 1, 1)
         grid.attach_next_to(vollabel, urilabel,
                             Gtk.PositionType.BOTTOM, 1, 1)
         grid.attach_next_to(self.volEntry, vollabel,
                             Gtk.PositionType.RIGHT, 2, 1)
-        grid.attach_next_to(self.playButton, vollabel,
-                            Gtk.PositionType.BOTTOM, 1, 1)
+        grid.attach_next_to(self.playButton, self.volEntry,
+                            Gtk.PositionType.RIGHT, 1, 1)
         grid.show_all()
 
         self.get_content_area().pack_start(grid, True, True, 0)
@@ -122,6 +128,24 @@ class AddDialog(Gtk.Dialog):
 
     def format(self, scale, value):
         return str(round(value*100)) + "%"
+
+    def on_file_clicked(self, widget):
+        dialog = Gtk.FileChooserDialog("Please choose a file", self,
+                                       Gtk.FileChooserAction.OPEN,
+                                       (Gtk.STOCK_CANCEL,
+                                        Gtk.ResponseType.CANCEL,
+                                        Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            print("Open clicked")
+            print("File selected: " + dialog.get_filename())
+            self.uriEntry.set_text("file://" + dialog.get_filename())
+        elif response == Gtk.ResponseType.CANCEL:
+            print("Cancel clicked")
+
+        dialog.show_all()
+        dialog.destroy()
 
 
 class Player():

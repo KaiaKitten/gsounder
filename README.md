@@ -15,7 +15,12 @@ A WIP soundboard application for Linux. Built using Python 3, GTK+3, and Gstream
 
 ### Todo:
 * Play only protion of clip
-* File chooser
 * Device settings/Pulse audio settings
 * Keybinding
 * Easier/Integrated installation (AUR, deb, ect.)
+* Play portion of file
+* Edit buttons
+* Delete buttons
+* Presistent sotrage (Gio)
+* Clip progress bar
+
