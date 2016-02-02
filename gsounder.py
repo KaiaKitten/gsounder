@@ -23,7 +23,7 @@ class Interface(Gtk.Window):
         addbtn.connect("clicked", self.on_button_clicked)
         hb.pack_end(addbtn)
 
-        self.init_buttons()
+        data.init_buttons()
 
         self.flowbox = Gtk.FlowBox()
         self.flowbox.set_valign(Gtk.Align.BASELINE)
@@ -32,7 +32,7 @@ class Interface(Gtk.Window):
         self.flowbox.set_selection_mode(Gtk.SelectionMode.NONE)
         self.add(self.flowbox)
 
-        self.connect("delete-event", Gtk.main_quit)
+        self.connect("delete-event", self.quit)
         self.show_all()
 
     def create_icon_button(self, icon_name):
@@ -50,11 +50,11 @@ class Interface(Gtk.Window):
             if response == Gtk.ResponseType.OK:
                 clip = Clip(dialog.nameEntry.get_text(),
                             dialog.uriEntry.get_text(),
-                            None, None, dialog.volEntry.get_value(), None)
+                            "", "", dialog.volEntry.get_value(), "")
                 btn = clip.create_button()
                 self.flowbox.insert(btn, -1)
                 self.show_all()
-                btn.write_button()
+                clip.button_json()
                 dialog.destroy()
                 break
             elif response == Gtk.ResponseType.APPLY:
@@ -64,18 +64,9 @@ class Interface(Gtk.Window):
                 dialog.destroy()
                 break
 
-    def init_buttons(self):
-        f = Gio.File.new_for_path("./data.json")
-        try:
-            f.read(None)
-        except:
-            f.replace(None, False, Gio.FileCreateFlags.NONE, None)
-        data = f.read(None)
-
-    def save_buttons(self):
-        f = Gio.File.new_for_path("./data.txt")
-
-        f.replace(None, False, Gio.FileCreateFlags.NONE, None)
+    def quit(self, widget, event):
+        data.save_buttons()
+        Gtk.main_quit()
 
 
 class AddDialog(Gtk.Dialog):
@@ -210,6 +201,38 @@ class Player():
         self.playing = not(self.playing)
 
 
+class Data():
+
+    def __init__(self):
+        self.json = Json.Builder.new()
+        self.json.begin_object()
+
+    def init_buttons(self):
+        f = Gio.File.new_for_path("./data.json")
+        try:
+            f.read(None)
+        except:
+            f.replace(None, False, Gio.FileCreateFlags.NONE, None)
+        data = f.read(None)
+
+    def read_buttons(self):
+        self.json.end_object()
+        gen = Json.Generator.new()
+        gen.set_root(self.json.get_root())
+        string = gen.to_data()
+        print(string)
+        return data
+
+    def save_buttons(self):
+        self.json.end_object()
+        gen = Json.Generator.new()
+        gen.set_root(self.json.get_root())
+        print(data)
+        f = Gio.File.new_for_path("./data.json")
+        stream = f.append_to(Gio.FileCreateFlags.NONE, None)
+        gen.to_stream(stream, None)
+
+
 class Clip():
 
     def __init__(self, name, uri, start, end, vol, key):
@@ -225,23 +248,15 @@ class Clip():
         btn.connect("clicked", self.on_button_clicked)
         return btn
 
-    def write_button(self):
-        data = Json.Builder.new()
-        data.begin_object()
-        data.set_member_name("name")
-        data.add_string_value(self.name)
-        data.set_member_name("uri")
-        data.add_string_value(self.uri)
-        data.set_member_name("volume")
-        data.add_double_value(self.vol)
-        data.set_member_name("start")
-        data.add_string_value(self.start)
-        data.set_member_name("end")
-        data.add_string_value(self.end)
-        data.set_member_name("key")
-        data.add_string_value(self.key)
-        data.end_object()
-        return data
+    def button_json(self):
+        data.json.set_member_name(self.name)
+        data.json.begin_array()
+        data.json.add_string_value(self.uri)
+        data.json.add_double_value(self.vol)
+        data.json.add_string_value(self.start)
+        data.json.add_string_value(self.end)
+        data.json.add_string_value(self.key)
+        data.json.end_array()
 
     def on_button_clicked(self, widget):
         player.set_uri(self.uri)
@@ -250,6 +265,7 @@ class Clip():
 
 
 if __name__ == "__main__":
+    data = Data()
     Interface()
     player = Player()
     Gtk.main()
