@@ -2,7 +2,8 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version('Gst', '1.0')
 gi.require_version('GstAudio', '1.0')
-from gi.repository import Gtk, Gio, Gst, GstAudio
+gi.require_version('Json', '1.0')
+from gi.repository import Gtk, Gio, Gst, GstAudio, Gio, Json
 
 
 class Interface(Gtk.Window):
@@ -21,6 +22,8 @@ class Interface(Gtk.Window):
         addbtn = self.create_icon_button("list-add-symbolic")
         addbtn.connect("clicked", self.on_button_clicked)
         hb.pack_end(addbtn)
+
+        self.init_buttons()
 
         self.flowbox = Gtk.FlowBox()
         self.flowbox.set_valign(Gtk.Align.BASELINE)
@@ -47,10 +50,11 @@ class Interface(Gtk.Window):
             if response == Gtk.ResponseType.OK:
                 clip = Clip(dialog.nameEntry.get_text(),
                             dialog.uriEntry.get_text(),
-                            None, None, dialog.volEntry.get_value())
+                            None, None, dialog.volEntry.get_value(), None)
                 btn = clip.create_button()
                 self.flowbox.insert(btn, -1)
                 self.show_all()
+                btn.write_button()
                 dialog.destroy()
                 break
             elif response == Gtk.ResponseType.APPLY:
@@ -59,6 +63,19 @@ class Interface(Gtk.Window):
             elif response == Gtk.ResponseType.CANCEL:
                 dialog.destroy()
                 break
+
+    def init_buttons(self):
+        f = Gio.File.new_for_path("./data.json")
+        try:
+            f.read(None)
+        except:
+            f.replace(None, False, Gio.FileCreateFlags.NONE, None)
+        data = f.read(None)
+
+    def save_buttons(self):
+        f = Gio.File.new_for_path("./data.txt")
+
+        f.replace(None, False, Gio.FileCreateFlags.NONE, None)
 
 
 class AddDialog(Gtk.Dialog):
@@ -93,7 +110,6 @@ class AddDialog(Gtk.Dialog):
         self.volEntry.set_hexpand(True)
         self.volEntry.connect("change-value", player.set_volume_slider)
         self.volEntry.connect("format-value", self.format)
-
 
         self.fileButton = Gtk.Button("Browse")
         self.fileButton.connect("clicked", self.on_file_clicked)
@@ -196,23 +212,41 @@ class Player():
 
 class Clip():
 
-    def __init__(self, name, uri, start, end, vol):
+    def __init__(self, name, uri, start, end, vol, key):
         self.name = name
         self.uri = uri
         self.start = start
         self.end = end
         self.vol = vol
+        self.key = key
 
     def create_button(self):
         btn = Gtk.Button.new_with_label(self.name)
         btn.connect("clicked", self.on_button_clicked)
         return btn
 
+    def write_button(self):
+        data = Json.Builder.new()
+        data.begin_object()
+        data.set_member_name("name")
+        data.add_string_value(self.name)
+        data.set_member_name("uri")
+        data.add_string_value(self.uri)
+        data.set_member_name("volume")
+        data.add_double_value(self.vol)
+        data.set_member_name("start")
+        data.add_string_value(self.start)
+        data.set_member_name("end")
+        data.add_string_value(self.end)
+        data.set_member_name("key")
+        data.add_string_value(self.key)
+        data.end_object()
+        return data
+
     def on_button_clicked(self, widget):
         player.set_uri(self.uri)
         player.set_volume(self.vol)
         player.playToggled(widget)
-
 
 
 if __name__ == "__main__":
