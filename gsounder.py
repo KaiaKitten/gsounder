@@ -23,14 +23,15 @@ class Interface(Gtk.Window):
         addbtn.connect("clicked", self.on_button_clicked)
         hb.pack_end(addbtn)
 
-        data.init_buttons()
-
         self.flowbox = Gtk.FlowBox()
         self.flowbox.set_valign(Gtk.Align.BASELINE)
         self.flowbox.set_halign(Gtk.Align.BASELINE)
         self.flowbox.set_homogeneous(True)
         self.flowbox.set_selection_mode(Gtk.SelectionMode.NONE)
         self.add(self.flowbox)
+
+        self.data = Data()
+        self.data.read_buttons(self.flowbox)
 
         self.connect("delete-event", self.quit)
         self.show_all()
@@ -50,7 +51,8 @@ class Interface(Gtk.Window):
             if response == Gtk.ResponseType.OK:
                 clip = Clip(dialog.nameEntry.get_text(),
                             dialog.uriEntry.get_text(),
-                            "", "", dialog.volEntry.get_value(), "")
+                            dialog.volEntry.get_value(),
+                            " ", " ",  " ")
                 btn = clip.create_button()
                 self.flowbox.insert(btn, -1)
                 self.show_all()
@@ -65,7 +67,7 @@ class Interface(Gtk.Window):
                 break
 
     def quit(self, widget, event):
-        data.save_buttons()
+        self.data.save_buttons()
         Gtk.main_quit()
 
 
@@ -145,12 +147,9 @@ class AddDialog(Gtk.Dialog):
 
         response = dialog.run()
         if response == Gtk.ResponseType.OK:
-            print("Open clicked")
-            print("File selected: " + dialog.get_filename())
             self.uriEntry.set_text("file://" + dialog.get_filename())
         elif response == Gtk.ResponseType.CANCEL:
-            print("Cancel clicked")
-
+            pass
         dialog.show_all()
         dialog.destroy()
 
@@ -169,9 +168,6 @@ class Player():
         fakesink = Gst.ElementFactory.make("fakesink", "fakesink")
         self.player.set_property("video-sink", fakesink)
         bus = self.player.get_bus()
-        # bus.add_signal_watch_full()
-        # bus.connect("message", self.on_message)
-        # self.player.connect("about-to-finish",  self.on_finished)
 
     def get_volume(self):
         return self.player.get_property("volume")
@@ -205,37 +201,63 @@ class Data():
 
     def __init__(self):
         self.json = Json.Builder.new()
-        self.json.begin_object()
+        self.json.begin_array()
 
-    def init_buttons(self):
-        f = Gio.File.new_for_path("./data.json")
+    def read_buttons(self, widget):
+        self.parser = Json.Parser.new()
         try:
-            f.read(None)
+            self.parser.load_from_file("./data.json")
         except:
-            f.replace(None, False, Gio.FileCreateFlags.NONE, None)
-        data = f.read(None)
-
-    def read_buttons(self):
-        self.json.end_object()
-        gen = Json.Generator.new()
-        gen.set_root(self.json.get_root())
-        string = gen.to_data()
-        print(string)
-        return data
+            return
+        reader = Json.Reader.new(self.parser.get_root())
+        count = reader.count_elements()
+        for i in range(count):
+            reader.read_element(i)
+            count = reader.count_elements()
+            reader.read_element(0)
+            name = reader.get_string_value()
+            reader.end_element()
+            reader.read_element(1)
+            uri = reader.get_string_value()
+            reader.end_element()
+            reader.read_element(2)
+            vol = reader.get_int_value()
+            reader.end_element()
+            reader.read_element(3)
+            start = reader.get_string_value()
+            reader.end_element()
+            reader.read_element(4)
+            end = reader.get_string_value()
+            reader.end_element()
+            reader.read_element(5)
+            key = reader.get_string_value()
+            reader.end_element()
+            reader.end_element()
+            reader.end_element()
+            self.json.begin_array()
+            self.json.add_string_value(name)
+            self.json.add_string_value(uri)
+            self.json.add_int_value(vol)
+            self.json.add_string_value(start)
+            self.json.add_string_value(end)
+            self.json.add_string_value(key)
+            self.json.end_array()
+            clip = Clip(name, uri, vol, start, end, key)
+            btn = clip.create_button()
+            widget.insert(btn, -1)
 
     def save_buttons(self):
-        self.json.end_object()
+        self.json.end_array()
         gen = Json.Generator.new()
         gen.set_root(self.json.get_root())
-        print(data)
         f = Gio.File.new_for_path("./data.json")
-        stream = f.append_to(Gio.FileCreateFlags.NONE, None)
+        stream = f.replace(None, False, Gio.FileCreateFlags.NONE, None)
         gen.to_stream(stream, None)
 
 
 class Clip():
 
-    def __init__(self, name, uri, start, end, vol, key):
+    def __init__(self, name, uri, vol, start, end, key):
         self.name = name
         self.uri = uri
         self.start = start
@@ -249,14 +271,15 @@ class Clip():
         return btn
 
     def button_json(self):
-        data.json.set_member_name(self.name)
-        data.json.begin_array()
-        data.json.add_string_value(self.uri)
-        data.json.add_double_value(self.vol)
-        data.json.add_string_value(self.start)
-        data.json.add_string_value(self.end)
-        data.json.add_string_value(self.key)
-        data.json.end_array()
+        # interface.data.json.set_member_name(self.name)
+        interface.data.json.begin_array()
+        interface.data.json.add_string_value(self.name)
+        interface.data.json.add_string_value(self.uri)
+        interface.data.json.add_double_value(self.vol)
+        interface.data.json.add_string_value(self.start)
+        interface.data.json.add_string_value(self.end)
+        interface.data.json.add_string_value(self.key)
+        interface.data.json.end_array()
 
     def on_button_clicked(self, widget):
         player.set_uri(self.uri)
@@ -265,7 +288,6 @@ class Clip():
 
 
 if __name__ == "__main__":
-    data = Data()
-    Interface()
+    interface = Interface()
     player = Player()
     Gtk.main()
