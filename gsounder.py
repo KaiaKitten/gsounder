@@ -3,14 +3,14 @@ gi.require_version("Gtk", "3.0")
 gi.require_version('Gst', '1.0')
 gi.require_version('GstAudio', '1.0')
 gi.require_version('Json', '1.0')
-from gi.repository import Gtk, Gio, Gst, GstAudio, Gio, Json
+from gi.repository import Gtk, Gio, Gst, GstAudio, Gio, Json, GLib
 
 
 class Interface(Gtk.Window):
 
     def __init__(self):
         Gtk.Window.__init__(self, title="gsounder")
-        self.set_border_width(10)
+        self.set_border_width(0)
         self.set_default_size(400, 200)
         hb = Gtk.HeaderBar()
         hb.set_show_close_button(True)
@@ -23,12 +23,25 @@ class Interface(Gtk.Window):
         addbtn.connect("clicked", self.on_button_clicked)
         hb.pack_end(addbtn)
 
+        self.progressbar = Gtk.ProgressBar()
+        self.progressbar.set_vexpand(False)
+        self.progressbar.set_hexpand(False)
+        self.progressbar.set_margin_bottom(0)
+        self.progressbar.set_margin_top(0)
+
+        box = Gtk.VBox.new(False, 0)
+        box.pack_start(self.progressbar, False, False, 0)
+        box.set_valign(Gtk.Align.BASELINE)
         self.flowbox = Gtk.FlowBox()
         self.flowbox.set_valign(Gtk.Align.BASELINE)
-        self.flowbox.set_halign(Gtk.Align.BASELINE)
         self.flowbox.set_homogeneous(True)
         self.flowbox.set_selection_mode(Gtk.SelectionMode.NONE)
-        self.add(self.flowbox)
+        self.flowbox.set_margin_right(5)
+        self.flowbox.set_margin_left(5)
+
+        box.pack_start(self.flowbox, True, True, 5)
+
+        self.add(box)
 
         self.data = Data()
         self.data.read_buttons(self.flowbox)
@@ -69,6 +82,17 @@ class Interface(Gtk.Window):
     def quit(self, widget, event):
         self.data.save_buttons()
         Gtk.main_quit()
+
+    def updateProgress(self):
+        if player.playing == False:
+            return False
+            print("stoping")
+        duration = player.player.query_duration(Gst.Format.TIME)[1]
+        position = player.player.query_position(Gst.Format.TIME)[1]
+        fraction = position/duration
+        print(fraction)
+        self.progressbar.set_fraction(fraction)
+        return True
 
 
 class AddDialog(Gtk.Dialog):
@@ -184,6 +208,7 @@ class Player():
     def play(self):
         self.player.set_property("uri", self.uri)
         self.player.set_state(Gst.State.PLAYING)
+        GLib.timeout_add(100, interface.updateProgress)
 
     def stop(self):
         self.player.set_state(Gst.State.NULL)

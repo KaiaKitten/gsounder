@@ -6,6 +6,8 @@ A WIP soundboard application for Linux. Built using Python 3, GTK+3, and Gstream
 * Per clip volume
 * Plays web URLs as well as offline files
 * Plays audio from video files
+* Clip progress bar
+* Buttons stored in simple Json files
 
 ### Installation:
 * Download ZIP or clone git `git clone https://github.com/kyahco/gsounder.git`
@@ -21,6 +23,3 @@ A WIP soundboard application for Linux. Built using Python 3, GTK+3, and Gstream
 * Play portion of file
 * Edit buttons
 * Delete buttons
-* Presistent sotrage (Gio)
-* Clip progress bar
-
