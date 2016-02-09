@@ -9,17 +9,18 @@ from gi.repository import Gtk, Gio, Gst, GstAudio, Gio, Json, GLib
 class Interface(Gtk.Window):
 
     def __init__(self):
-        Gtk.Window.__init__(self, title="gsounder")
+        Gtk.Window.__init__(self, title="GSounder")
         self.set_border_width(0)
         self.set_default_size(400, 200)
         hb = Gtk.HeaderBar()
         hb.set_show_close_button(True)
-        hb.props.title = "gsounder"
+        hb.props.title = "GSounder"
         self.set_titlebar(hb)
 
-        hb.pack_end(self.create_icon_button("open-menu-symbolic"))
-        hb.pack_end(self.create_icon_button("edit-symbolic"))
-        addbtn = self.create_icon_button("list-add-symbolic")
+        hb.pack_end(self.create_icon_button("open-menu"))
+        hb.pack_end(self.create_icon_button("edit"))
+        hb.pack_end(self.create_icon_button("edit-delete"))
+        addbtn = self.create_icon_button("list-add")
         addbtn.connect("clicked", self.on_button_clicked)
         hb.pack_end(addbtn)
 
