@@ -1,3 +1,4 @@
+from enum import Enum
 import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version('Gst', '1.0')
@@ -19,7 +20,11 @@ class Interface(Gtk.Window):
 
         hb.pack_end(self.create_icon_button("open-menu"))
         hb.pack_end(self.create_icon_button("edit"))
-        hb.pack_end(self.create_icon_button("edit-delete"))
+
+        deletebtn = self.create_icon_button("edit-delete")
+        deletebtn.connect("clicked", self.on_delete_button_clicked)
+        hb.pack_end(deletebtn)
+
         addbtn = self.create_icon_button("list-add")
         addbtn.connect("clicked", self.on_button_clicked)
         hb.pack_end(addbtn)
@@ -37,6 +42,7 @@ class Interface(Gtk.Window):
         self.flowbox.set_valign(Gtk.Align.BASELINE)
         self.flowbox.set_homogeneous(True)
         self.flowbox.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.flowbox.set_activate_on_single_click(True)
         self.flowbox.set_margin_right(5)
         self.flowbox.set_margin_left(5)
 
@@ -46,6 +52,8 @@ class Interface(Gtk.Window):
 
         self.data = Data()
         self.data.read_buttons(self.flowbox)
+
+        self.mode = Mode.play
 
         self.connect("delete-event", self.quit)
         self.show_all()
@@ -58,6 +66,7 @@ class Interface(Gtk.Window):
         return btn
 
     def on_button_clicked(self, widget):
+        self.mode = Mode.play
         dialog = AddDialog(self)
         respone = None
         while(respone is None):
@@ -67,8 +76,7 @@ class Interface(Gtk.Window):
                             dialog.uriEntry.get_text(),
                             dialog.volEntry.get_value(),
                             " ", " ",  " ")
-                btn = clip.create_button()
-                self.flowbox.insert(btn, -1)
+                self.flowbox.insert(clip.create_button(), -1)
                 self.show_all()
                 clip.button_json()
                 dialog.destroy()
@@ -79,6 +87,9 @@ class Interface(Gtk.Window):
             elif response == Gtk.ResponseType.CANCEL:
                 dialog.destroy()
                 break
+
+    def on_delete_button_clicked(self, widget):
+        self.mode = Mode.delete
 
     def quit(self, widget, event):
         self.data.save_buttons()
@@ -269,8 +280,7 @@ class Data():
             self.json.add_string_value(key)
             self.json.end_array()
             clip = Clip(name, uri, vol, start, end, key)
-            btn = clip.create_button()
-            widget.insert(btn, -1)
+            widget.insert(clip.create_button(), -1)
 
     def save_buttons(self):
         self.json.end_array()
@@ -297,7 +307,6 @@ class Clip():
         return btn
 
     def button_json(self):
-        # interface.data.json.set_member_name(self.name)
         interface.data.json.begin_array()
         interface.data.json.add_string_value(self.name)
         interface.data.json.add_string_value(self.uri)
@@ -308,10 +317,20 @@ class Clip():
         interface.data.json.end_array()
 
     def on_button_clicked(self, widget):
-        player.set_uri(self.uri)
-        player.set_volume(self.vol)
-        player.playToggled(widget)
+        if interface.mode == Mode.play:
+            player.set_uri(self.uri)
+            player.set_volume(self.vol)
+            player.playToggled(widget)
 
+        if interface.mode == Mode.delete:
+            # interface.flowbox.remove(widget)
+            widget.destroy()
+
+
+class Mode(Enum):
+    delete = 1
+    edit = 2
+    play = 3
 
 if __name__ == "__main__":
     interface = Interface()
